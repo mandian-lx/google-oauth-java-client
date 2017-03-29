@@ -118,6 +118,45 @@ This package contains javadoc for %{name}.
 
 %pom_xpath_remove -r "pom:plugin[pom:artifactId ='maven-jar-plugin']/pom:executions"
 
+# Add an OSGi compilant MANIFEST.MF
+for m in `find */ -name pom.xml`
+do
+%pom_add_plugin org.apache.felix:maven-bundle-plugin $m "
+<extensions>true</extensions>
+<configuration>
+	<supportedProjectTypes>
+		<supportedProjectType>bundle</supportedProjectType>
+		<supportedProjectType>jar</supportedProjectType>
+	</supportedProjectTypes>
+	<instructions>
+		<Bundle-Name>\${project.artifactId}</Bundle-Name>
+		<Bundle-Version>\${project.version}</Bundle-Version>
+	</instructions>
+</configuration>
+<executions>
+	<execution>
+		<id>bundle-manifest</id>
+		<phase>process-classes</phase>
+		<goals>
+			<goal>manifest</goal>
+		</goals>
+	</execution>
+</executions>"
+done
+
+# Add the META-INF/INDEX.LIST (fix jar-not-indexed warning) and
+# the META-INF/MANIFEST.MF to the jar archive
+%pom_xpath_inject "pom:plugin[pom:artifactId[./text()='maven-jar-plugin']]/pom:configuration" "
+<archive>
+	<manifestFile>\${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+	<manifest>
+		<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+		<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+	</manifest>
+	<index>true</index>
+</archive>"
+
+
 %build
 
 %mvn_build -s
